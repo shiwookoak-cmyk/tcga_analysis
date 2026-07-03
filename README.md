@@ -84,36 +84,6 @@ figures/LUAD/
 This directory is intended for GitHub upload, while the full `data/` directory
 remains ignored.
 
-## Example Output Figures
-
-The LUAD example pipeline generates the following figures.
-
-### KEGG Metabolic Pathway Map
-
-![LUAD KEGG metabolic pathway map](figures/LUAD/LUAD_coxph_continuous_gsea_kegg_map.svg)
-
-### ssGSEA Immune Signature Scoring
-
-| Signature correlation | Sample score heatmap |
-| --- | --- |
-| ![LUAD ssGSEA signature correlation heatmap](figures/LUAD/LUAD_ssgsea_signature_correlation_heatmap.svg) | ![LUAD ssGSEA sample score heatmap](figures/LUAD/LUAD_ssgsea_sample_score_heatmap.svg) |
-
-### RNA Expression Analysis
-
-| Tumor-normal comparison | STK11 mutation groups |
-| --- | --- |
-| ![LUAD PLA2G4A tumor-normal comparison](figures/LUAD/LUAD_PLA2G4A_paired_tumor_normal_box.svg) | ![LUAD PLA2G4A STK11 mutation group comparison](figures/LUAD/LUAD_PLA2G4A_STK11_mutation_group_box.svg) |
-
-| Sample-type scatter | STK11-status scatter |
-| --- | --- |
-| ![LUAD PLA2G4A PTGS2 scatter by sample type](figures/LUAD/LUAD_PLA2G4A_PTGS2_scatter_sample_type.svg) | ![LUAD PLA2G4A PTGS2 scatter by STK11 status](figures/LUAD/LUAD_PLA2G4A_PTGS2_STK11_scatter.svg) |
-
-### Oncoprint
-
-| Oncoprint | Fisher test heatmap |
-| --- | --- |
-| ![LUAD oncoprint](figures/LUAD/LUAD_oncoprint.svg) | ![LUAD oncoprint Fisher heatmap](figures/LUAD/LUAD_oncoprint_fisher_heatmap.svg) |
-
 ## Individual Scripts
 
 ### 1. Download TCGA Data
@@ -173,6 +143,8 @@ Output:
 data/LUAD_coxph_continuous_gsea_kegg_map.svg
 ```
 
+![LUAD KEGG metabolic pathway map](figures/LUAD/LUAD_coxph_continuous_gsea_kegg_map.svg)
+
 ### 5. ssGSEA Immune Signature Scoring
 
 ```bash
@@ -190,6 +162,10 @@ data/LUAD_ssgsea_signature_correlation_heatmap.svg
 data/LUAD_ssgsea_sample_score_heatmap.svg
 ```
 
+| Signature correlation | Sample score heatmap |
+| --- | --- |
+| ![LUAD ssGSEA signature correlation heatmap](figures/LUAD/LUAD_ssgsea_signature_correlation_heatmap.svg) | ![LUAD ssGSEA sample score heatmap](figures/LUAD/LUAD_ssgsea_sample_score_heatmap.svg) |
+
 ### 6. mRNA Expression Analysis
 
 Edit the user settings in `main()` or import the `AnalyzeExpression` class into
@@ -198,6 +174,25 @@ a notebook:
 ```bash
 python src/06_analyze_expression.py
 ```
+
+Outputs:
+
+```text
+data/LUAD_PLA2G4A_paired_tumor_normal_stats.tsv
+data/LUAD_PLA2G4A_paired_tumor_normal_box.svg
+data/LUAD_PLA2G4A_STK11_mutation_group_stats.tsv
+data/LUAD_PLA2G4A_STK11_mutation_group_box.svg
+data/LUAD_PLA2G4A_PTGS2_scatter_sample_type.svg
+data/LUAD_PLA2G4A_PTGS2_STK11_scatter.svg
+```
+
+| Tumor-normal comparison | STK11 mutation groups |
+| --- | --- |
+| ![LUAD PLA2G4A tumor-normal comparison](figures/LUAD/LUAD_PLA2G4A_paired_tumor_normal_box.svg) | ![LUAD PLA2G4A STK11 mutation group comparison](figures/LUAD/LUAD_PLA2G4A_STK11_mutation_group_box.svg) |
+
+| Sample-type scatter | STK11-status scatter |
+| --- | --- |
+| ![LUAD PLA2G4A PTGS2 scatter by sample type](figures/LUAD/LUAD_PLA2G4A_PTGS2_scatter_sample_type.svg) | ![LUAD PLA2G4A PTGS2 scatter by STK11 status](figures/LUAD/LUAD_PLA2G4A_PTGS2_STK11_scatter.svg) |
 
 ### 7. Oncoprint
 
@@ -212,6 +207,10 @@ data/LUAD_oncoprint_fisher.tsv
 data/LUAD_oncoprint_fisher_heatmap.svg
 data/LUAD_oncoprint.svg
 ```
+
+| Oncoprint | Fisher test heatmap |
+| --- | --- |
+| ![LUAD oncoprint](figures/LUAD/LUAD_oncoprint.svg) | ![LUAD oncoprint Fisher heatmap](figures/LUAD/LUAD_oncoprint_fisher_heatmap.svg) |
 
 ## Notes
 
