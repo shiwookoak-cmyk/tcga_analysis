@@ -1,0 +1,38 @@
+# macOS and editor files
+.DS_Store
+.idea/
+.vscode/
+
+# R session and project state
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
+Rplots.pdf
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Downloaded TCGA/GDC data and analysis outputs
+data/
+GDCdata/
+MANIFEST.txt
+
+# Large downloaded archives and unpacked GDAC/GISTIC folders
+*.tar.gz
+*.zip
+gdac.broadinstitute.org_*/
+
+# Intermediate R objects and generated KEGG files
+*.rds
+*.RDS
+hsa*.xml
+ko*.xml
+map*.xml
+M[0-9][0-9][0-9][0-9][0-9]
+
+# Runtime logs
+*.log
+logs/
