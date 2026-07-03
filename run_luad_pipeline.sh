@@ -25,7 +25,7 @@
 #    data/LUAD_oncoprint_fisher.tsv
 #    data/LUAD_oncoprint_fisher_heatmap.svg
 #    data/LUAD_oncoprint.svg
-#    figures/LUAD/*.svg
+#    figures/*.svg
 #    data/logs/LUAD_pipeline_<timestamp>.log
 # ==============================================================================
 
@@ -36,7 +36,7 @@ SURVIVAL_METHOD="continuous"
 GMT_FILE="immune_signature.gmt"
 KEGG_PADJ_CUTOFF="0.05"
 DRIVER_GENES=("TP53" "KRAS" "STK11" "KEAP1" "EGFR" "NF1")
-FIGURE_DIR="figures/${CANCER}"
+FIGURE_DIR="figures"
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${PROJECT_DIR}"
