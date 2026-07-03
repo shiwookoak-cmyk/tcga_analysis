@@ -81,6 +81,10 @@ has_module_highlight <- function(data, module_ids) {
   rowSums(data[, module_ids, drop = FALSE], na.rm = TRUE) > 0
 }
 
+is_artificial_origin <- function(x, y) {
+  is.finite(x) & is.finite(y) & x == 0 & y == 0
+}
+
 ################################################################################
 # Step 2: Prepare GSEA and KEGG Module Data ------------------------------------
 ################################################################################
@@ -310,6 +314,14 @@ get_visible_modules <- function(module_ids, node_data, edge_data) {
       drop = FALSE
     ]
     
+    if ("drawable_edge" %in% colnames(matched_edges)) {
+      matched_edges <- matched_edges[
+        matched_edges$drawable_edge %in% TRUE,
+        ,
+        drop = FALSE
+      ]
+    }
+    
     edge_visible <- matched_edges %>%
       get_edge_coordinates(node_data) %>%
       nrow() > 0
@@ -410,10 +422,29 @@ prepare_metabolic_map <- function(module_table) {
     activate(edges) %>%
     as_tibble()
   
-  drawable_edge <- is.finite(node_data$x[edge_data$from]) &
-    is.finite(node_data$y[edge_data$from]) &
-    is.finite(node_data$x[edge_data$to]) &
-    is.finite(node_data$y[edge_data$to])
+  from_x <- node_data$x[edge_data$from]
+  from_y <- node_data$y[edge_data$from]
+  to_x <- node_data$x[edge_data$to]
+  to_y <- node_data$y[edge_data$to]
+  
+  edge_dx <- abs(from_x - to_x)
+  edge_dy <- abs(from_y - to_y)
+  edge_length <- sqrt(edge_dx^2 + edge_dy^2)
+  
+  artificial_origin_edge <- is_artificial_origin(from_x, from_y) |
+    is_artificial_origin(to_x, to_y)
+  
+  long_diagonal_edge <- edge_data$type == "line" &
+    edge_length > 100 &
+    edge_dx > 25 &
+    edge_dy > 25
+  
+  drawable_edge <- is.finite(from_x) &
+    is.finite(from_y) &
+    is.finite(to_x) &
+    is.finite(to_y) &
+    !artificial_origin_edge &
+    !long_diagonal_edge
   
   drawable_edge[is.na(drawable_edge)] <- FALSE
   
@@ -538,7 +569,7 @@ plot_metabolic_map <- function(metabolic_data, output_path) {
     mutate(label_color = ifelse(direction == "positive", "red", "blue"))
   
   node_coordinates <- node_data %>%
-    filter(is.finite(x), is.finite(y))
+    filter(is.finite(x), is.finite(y), !is_artificial_origin(x, y))
   
   plot_x_limits <- range(node_coordinates$x)
   plot_y_limits <- range(node_coordinates$y)
