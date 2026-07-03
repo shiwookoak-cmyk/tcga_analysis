@@ -11,6 +11,15 @@
 .Rproj.user/
 Rplots.pdf
 
+# renv local package library
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
+
 # Python cache files
 __pycache__/
 *.py[cod]

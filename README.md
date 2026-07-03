@@ -19,8 +19,13 @@ tcga_analysis/
 |   |-- 05_run_ssgsea.R
 |   |-- 06_analyze_expression.py
 |   `-- 07_oncoprint.py
+|-- renv/
+|   |-- activate.R
+|   `-- settings.json
+|-- .Rprofile
 |-- run_luad_pipeline.sh
 |-- immune_signature.gmt
+|-- renv.lock
 |-- requirements.txt
 `-- README.md
 ```
@@ -29,48 +34,19 @@ tcga_analysis/
 
 ### R Packages
 
-Install CRAN packages:
+Exact R package versions are recorded in `renv.lock`. To restore the R
+environment:
 
 ```r
-install.packages(c(
-  "dplyr",
-  "readr",
-  "survival",
-  "ggplot2",
-  "ggrepel",
-  "ggraph",
-  "ggfx",
-  "tidygraph",
-  "pheatmap",
-  "svglite",
-  "msigdbr",
-  "remotes"
-))
+install.packages("renv")
+renv::restore()
 ```
 
-Install Bioconductor packages:
+The lockfile was generated with:
 
-```r
-if (!requireNamespace("BiocManager", quietly = TRUE)) {
-  install.packages("BiocManager")
-}
-
-BiocManager::install(c(
-  "TCGAbiolinks",
-  "SummarizedExperiment",
-  "clusterProfiler",
-  "ReactomePA",
-  "org.Hs.eg.db",
-  "GO.db",
-  "GSVA",
-  "KEGGREST"
-))
-```
-
-Install `ggkegg`:
-
-```r
-remotes::install_github("noriakis/ggkegg")
+```text
+R 4.6.0
+Bioconductor 3.23
 ```
 
 ### Python Packages
