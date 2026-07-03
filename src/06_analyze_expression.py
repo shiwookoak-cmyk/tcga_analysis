@@ -841,7 +841,7 @@ class AnalyzeExpression:
 
 def main():
     # ---- User settings --------------------------------------------------------
-    cancer_type = "LIHC"
+    cancer_type = "LUAD"
     data_dir = "data"
     output_dir = data_dir
 
@@ -864,7 +864,7 @@ def main():
     )
 
     # 2) Compare tumor and normal expression
-    expression_gene = "RBM39"
+    expression_gene = "PLA2G4A"
     paired = True
     comparison = "paired" if paired else "unpaired"
 
@@ -894,8 +894,8 @@ def main():
     )
 
     # 3) Compare expression by driver mutation status
-    expression_gene = "RBM39"
-    driver_gene = "CTNNB1"
+    expression_gene = "PLA2G4A"
+    driver_gene = "STK11"
 
     group_data, group_stats = analysis.compare_mutation_groups(
         gene=expression_gene,
@@ -924,8 +924,8 @@ def main():
     )
 
     # 4) Plot gene-gene expression scatter plots
-    scatter_x_gene = "CPS1"
-    scatter_y_gene = "RBM39"
+    scatter_x_gene = "PLA2G4A"
+    scatter_y_gene = "PTGS2"
     plot_normal = True
 
     sample_type_scatter_file = os.path.join(
@@ -939,9 +939,9 @@ def main():
         plot_normal=plot_normal,
     )
 
-    scatter_x_gene = "CPS1"
-    scatter_y_gene = "RBM39"
-    driver_gene = "CTNNB1"
+    scatter_x_gene = "PLA2G4A"
+    scatter_y_gene = "PTGS2"
+    driver_gene = "STK11"
     plot_normal = True
 
     driver_scatter_file = os.path.join(

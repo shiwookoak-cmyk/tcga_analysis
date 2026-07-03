@@ -9,7 +9,7 @@
 #    signatures, and one showing signature scores across TCGA samples. Samples
 #    are restricted to primary tumors and low-library-size samples are removed.
 #    Lowly expressed genes are filtered using raw counts without restricting to
-#    protein-coding annotations. Genes are retained when they have at least 5
+#    protein-coding annotations. Genes are retained when they have at least 15
 #    raw counts in at least 20% of retained samples.
 #    ssGSEA is run without global score normalization, then scores are z-scored
 #    separately for each gene set across samples.
@@ -147,10 +147,10 @@ filter_genes <- function(expression_data, counts_data) {
   storage.mode(counts_matrix) <- "numeric"
   
   min_samples <- ceiling(0.20 * length(sample_cols))
-  count_filter <- rowSums(counts_matrix >= 5, na.rm = TRUE) >= min_samples
+  count_filter <- rowSums(counts_matrix >= 15, na.rm = TRUE) >= min_samples
   
   message(
-    "  - Genes with >=5 raw counts in at least 20% of samples: ",
+    "  - Genes with >=15 raw counts in at least 20% of samples: ",
     sum(count_filter, na.rm = TRUE)
   )
   
