@@ -221,7 +221,9 @@ data/LUAD_STK11_gene_group_heatmap.svg
 | --- | --- |
 | ![LUAD PLA2G4A PTGS2 scatter by sample type](figures/LUAD_PLA2G4A_PTGS2_scatter_sample_type.svg) | ![LUAD PLA2G4A PTGS2 scatter by STK11 status](figures/LUAD_PLA2G4A_PTGS2_STK11_scatter.svg) |
 
-![LUAD STK11 gene-group expression heatmap](figures/LUAD_STK11_gene_group_heatmap.svg)
+| STK11 gene-group expression heatmap |
+| --- |
+| ![LUAD STK11 gene-group expression heatmap](figures/LUAD_STK11_gene_group_heatmap.svg) |
 
 ### 7. Oncoprint
 
