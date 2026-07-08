@@ -3,7 +3,7 @@
 #  2026-06-25 | Shiwoo Koak | Seoul National University
 #
 #  Description:
-#    Visualize significant metabolic KEGG GSEA pathways from 03_run_gsea.R on the
+#    Visualize significant metabolic KEGG GSEA pathways from 03_pathway_analysis.R on the
 #    human global metabolic map. Significant KEGG pathways are restricted to the
 #    metabolism class, converted to their annotated KEGG modules, and highlighted
 #    on hsa01100. Pathway names are used as labels. Positive NES pathways are

@@ -6,7 +6,7 @@
 #
 #  Description:
 #    Run the LUAD example workflow: download TCGA data if needed, perform
-#    gene-wise survival analysis, run GSEA, map significant KEGG metabolic
+#    gene-wise survival analysis, run pathway analysis, map significant KEGG metabolic
 #    pathways, run ssGSEA immune signature scoring, run example expression
 #    analyses, create an oncoprint, and copy generated figures for GitHub.
 #
@@ -22,6 +22,7 @@
 #    data/LUAD_ssgsea_*_heatmap.svg
 #    data/LUAD_*_box.svg
 #    data/LUAD_*_scatter*.svg
+#    data/LUAD_*_gene_group_heatmap.svg
 #    data/LUAD_oncoprint_fisher.tsv
 #    data/LUAD_oncoprint_fisher_heatmap.svg
 #    data/LUAD_oncoprint.svg
@@ -81,8 +82,8 @@ Rscript src/02_gene_survival_analysis.R "${CANCER}" "${SURVIVAL_METHOD}"
 SURVIVAL_FILE="data/${CANCER}_coxph_${SURVIVAL_METHOD}.tsv"
 KEGG_GSEA_FILE="data/${CANCER}_coxph_${SURVIVAL_METHOD}_gsea_kegg.tsv"
 
-echo "Step 3/8: Running GSEA..."
-Rscript src/03_run_gsea.R "${SURVIVAL_FILE}"
+echo "Step 3/8: Running pathway analysis..."
+Rscript src/03_pathway_analysis.R "${SURVIVAL_FILE}"
 
 echo "Step 4/8: Mapping significant KEGG metabolic pathways..."
 if Rscript src/04_map_kegg_pathways.R "${KEGG_GSEA_FILE}" "${KEGG_PADJ_CUTOFF}"; then
@@ -109,6 +110,7 @@ FIGURE_FILES=(
   "data/${CANCER}_PLA2G4A_STK11_mutation_group_box.svg"
   "data/${CANCER}_PLA2G4A_PTGS2_scatter_sample_type.svg"
   "data/${CANCER}_PLA2G4A_PTGS2_STK11_scatter.svg"
+  "data/${CANCER}_STK11_gene_group_heatmap.svg"
   "data/${CANCER}_oncoprint_fisher_heatmap.svg"
   "data/${CANCER}_oncoprint.svg"
 )

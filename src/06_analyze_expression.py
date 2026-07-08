@@ -26,6 +26,9 @@ from itertools import combinations
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.colors import TwoSlopeNorm, to_rgb
+from scipy.cluster.hierarchy import dendrogram, leaves_list, linkage
+from scipy.spatial.distance import pdist
 from scipy.stats import gaussian_kde, kruskal, mannwhitneyu, pearsonr, t, wilcoxon
 from statsmodels.stats.multitest import multipletests
 
@@ -463,6 +466,441 @@ class AnalyzeExpression:
         print(f"Saved scatter plot to: {output_path}")
 
         return scatter_data
+
+    def plot_gene_heatmap(
+        self,
+        genes,
+        output_path,
+        driver_gene=None,
+        plot_normal=True,
+        color_percentile=95,
+    ):
+        """Plot row-scaled expression of multiple genes across sample groups."""
+        genes = list(dict.fromkeys(genes))
+        missing_genes = [
+            gene for gene in genes
+            if gene not in self.expression_by_gene.index
+        ]
+        genes = [gene for gene in genes if gene in self.expression_by_gene.index]
+
+        if len(genes) == 0:
+            raise ValueError("None of the requested genes were found.")
+
+        sample_groups = self.create_heatmap_sample_groups(
+            driver_gene=driver_gene,
+            plot_normal=plot_normal,
+        )
+        sample_groups = [
+            (group, samples)
+            for group, samples in sample_groups
+            if len(samples) > 0
+        ]
+
+        if len(sample_groups) == 0:
+            raise ValueError("No samples were available for heatmap plotting.")
+
+        sample_order = []
+        sample_group_labels = []
+
+        for group, samples in sample_groups:
+            sample_order.extend(samples)
+            sample_group_labels.extend([group] * len(samples))
+
+        expression_mat = (
+            self.expression_by_gene
+            .loc[genes, sample_order]
+            .apply(pd.to_numeric, errors="coerce")
+            .to_numpy(float)
+        )
+        expression_mat = self.zscore_rows(expression_mat)
+
+        (
+            sample_order,
+            expression_mat,
+            sample_group_labels,
+            sample_linkage,
+        ) = self.cluster_heatmap_samples(
+            expression_mat=expression_mat,
+            sample_order=sample_order,
+            sample_group_labels=sample_group_labels,
+        )
+
+        gene_linkage = self.get_cluster_linkage(expression_mat)
+        gene_order = self.get_cluster_order(expression_mat)
+        expression_mat = expression_mat[gene_order, :]
+        genes = [genes[i] for i in gene_order]
+
+        self.draw_gene_heatmap(
+            expression_mat=expression_mat,
+            genes=genes,
+            sample_group_labels=sample_group_labels,
+            gene_linkage=gene_linkage,
+            sample_linkage=sample_linkage,
+            output_path=output_path,
+            color_percentile=color_percentile,
+        )
+
+        print(f"Saved gene heatmap to: {output_path}")
+        print(f"Genes plotted: {len(genes)}")
+
+        for group, samples in sample_groups:
+            print(f"  - {group} samples: {len(samples)}")
+
+        if missing_genes:
+            print("Missing genes skipped: " + ", ".join(missing_genes))
+
+    def create_heatmap_sample_groups(self, driver_gene=None, plot_normal=True):
+        """Create sample groups for multi-gene heatmap plotting."""
+        if driver_gene is None:
+            sample_groups = [
+                ("Tumor", self.tumor_samples),
+            ]
+        else:
+            mutant_samples = self.get_mutant_samples(driver_gene)
+            wt_samples = sorted(set(self.tumor_samples) - set(mutant_samples))
+            sample_groups = [
+                (f"{driver_gene} WT", wt_samples),
+                (f"{driver_gene} MT", mutant_samples),
+            ]
+
+        if plot_normal:
+            sample_groups = [
+                ("Normal", self.normal_samples),
+                *sample_groups,
+            ]
+
+        return sample_groups
+
+    def cluster_heatmap_samples(
+        self,
+        expression_mat,
+        sample_order,
+        sample_group_labels,
+    ):
+        """Cluster all heatmap samples together."""
+        sample_linkage = self.get_cluster_linkage(expression_mat.T)
+
+        if sample_linkage is None:
+            ordered_indices = np.arange(expression_mat.shape[1])
+        else:
+            ordered_indices = leaves_list(sample_linkage)
+
+        ordered_samples = [sample_order[i] for i in ordered_indices]
+        ordered_group_labels = [sample_group_labels[i] for i in ordered_indices]
+
+        return (
+            ordered_samples,
+            expression_mat[:, ordered_indices],
+            ordered_group_labels,
+            sample_linkage,
+        )
+
+    def draw_gene_heatmap(
+        self,
+        expression_mat,
+        genes,
+        sample_group_labels,
+        gene_linkage,
+        sample_linkage,
+        output_path,
+        color_percentile,
+    ):
+        """Draw a clustered multi-gene heatmap with sample group colors."""
+        n_genes, n_samples = expression_mat.shape
+
+        vmax = np.nanpercentile(np.abs(expression_mat), color_percentile)
+        if not np.isfinite(vmax) or vmax == 0:
+            vmax = 1.0
+
+        norm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
+
+        cell_width = 0.015
+        cell_height = 0.16
+        left_margin = 0.45
+        row_dendrogram_width = 0.45
+        row_dendrogram_gap = 0.00
+        right_margin = 2.00
+        top_margin = 0.30
+        bottom_margin = 0.45
+        group_bar_height = 0.10
+        group_bar_gap = 0.00
+        sample_dendrogram_height = 0.62
+        sample_dendrogram_gap = 0.00
+
+        heatmap_width = max(n_samples * cell_width, 1.8)
+        heatmap_height = max(n_genes * cell_height, 1.4)
+        heatmap_x = left_margin + row_dendrogram_width + row_dendrogram_gap
+        heatmap_y = bottom_margin
+        figure_width = heatmap_x + heatmap_width + right_margin
+        figure_height = (
+            bottom_margin +
+            heatmap_height +
+            group_bar_gap +
+            group_bar_height +
+            sample_dendrogram_gap +
+            sample_dendrogram_height +
+            top_margin
+        )
+
+        fig = plt.figure(figsize=(figure_width, figure_height), dpi=300)
+
+        def x_fraction(x):
+            return x / figure_width
+
+        def y_fraction(y):
+            return y / figure_height
+
+        group_colors = self.get_heatmap_group_colors(sample_group_labels)
+
+        ax_row = fig.add_axes([
+            x_fraction(left_margin),
+            y_fraction(heatmap_y),
+            x_fraction(row_dendrogram_width),
+            y_fraction(heatmap_height),
+        ])
+        ax = fig.add_axes([
+            x_fraction(heatmap_x),
+            y_fraction(heatmap_y),
+            x_fraction(heatmap_width),
+            y_fraction(heatmap_height),
+        ])
+        ax_group = fig.add_axes([
+            x_fraction(heatmap_x),
+            y_fraction(heatmap_y + heatmap_height + group_bar_gap),
+            x_fraction(heatmap_width),
+            y_fraction(group_bar_height),
+        ])
+
+        self.draw_gene_dendrogram(ax=ax_row, gene_linkage=gene_linkage)
+        im = ax.imshow(
+            expression_mat,
+            aspect="auto",
+            cmap="viridis",
+            norm=norm,
+            interpolation="nearest",
+        )
+
+        for side in ["top", "bottom", "left", "right"]:
+            ax.spines[side].set_visible(True)
+            ax.spines[side].set_linewidth(1.0)
+            ax.spines[side].set_color("black")
+
+        ax.set_yticks(np.arange(n_genes))
+        ax.yaxis.tick_right()
+        ax.set_yticklabels(
+            [rf"$\it{{{gene}}}$" for gene in genes],
+            fontsize=8,
+        )
+        ax.set_xticks([])
+        ax.tick_params(
+            axis="y",
+            labelright=True,
+            labelleft=False,
+            length=0,
+            pad=4,
+        )
+
+        self.draw_group_annotation_bar(
+            ax=ax_group,
+            sample_group_labels=sample_group_labels,
+            group_colors=group_colors,
+            n_samples=n_samples,
+        )
+        ax_col = fig.add_axes([
+            x_fraction(heatmap_x),
+            y_fraction(heatmap_y + heatmap_height + group_bar_height),
+            x_fraction(heatmap_width),
+            y_fraction(sample_dendrogram_height),
+        ])
+        self.draw_sample_dendrogram(ax=ax_col, sample_linkage=sample_linkage)
+
+        colorbar_x = heatmap_x + heatmap_width + 0.85
+        colorbar_y = heatmap_y + heatmap_height * 0.60
+        colorbar_width = 0.12
+        colorbar_height = heatmap_height * 0.26
+        legend_gap = 0.12
+        legend_height = max(0.50, 0.16 * len(group_colors))
+        legend_y = max(
+            bottom_margin,
+            colorbar_y - legend_gap - legend_height
+        )
+        ax_cbar = fig.add_axes([
+            x_fraction(colorbar_x),
+            y_fraction(colorbar_y),
+            x_fraction(colorbar_width),
+            y_fraction(colorbar_height),
+        ])
+        colorbar = fig.colorbar(im, cax=ax_cbar)
+        colorbar.ax.tick_params(labelsize=8, length=3)
+        colorbar.ax.set_title("Z-score", fontsize=9, pad=6)
+
+        ax_legend = fig.add_axes([
+            x_fraction(colorbar_x - 0.08),
+            y_fraction(legend_y),
+            x_fraction(0.95),
+            y_fraction(legend_height),
+        ])
+        self.draw_heatmap_group_legend(
+            ax=ax_legend,
+            group_colors=group_colors,
+        )
+
+        fig.savefig(output_path, format="svg")
+        plt.close(fig)
+
+        print(
+            f"Heatmap color scale: +/- {vmax:.2f} "
+            f"({color_percentile}th percentile)"
+        )
+
+    def get_heatmap_group_colors(self, sample_group_labels):
+        """Assign one annotation color to each heatmap sample group."""
+        group_colors = {}
+
+        for group in dict.fromkeys(sample_group_labels):
+            if group == "Normal":
+                color = GREY
+            elif group.endswith(" WT"):
+                color = STEEL_BLUE
+            elif group.endswith(" MT"):
+                color = BRICK_RED
+            else:
+                color = BRICK_RED
+
+            group_colors[group] = color
+
+        return group_colors
+
+    def draw_group_annotation_bar(
+        self,
+        ax,
+        sample_group_labels,
+        group_colors,
+        n_samples,
+    ):
+        """Draw a one-row color strip showing sample group identity."""
+        color_row = np.ones((1, n_samples, 3))
+
+        for index, group in enumerate(sample_group_labels):
+            color_row[:, index, :] = to_rgb(group_colors[group])
+
+        ax.imshow(color_row, aspect="auto", interpolation="nearest")
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+        for side in ["top", "bottom", "left", "right"]:
+            ax.spines[side].set_visible(True)
+            ax.spines[side].set_linewidth(0.8)
+            ax.spines[side].set_color("black")
+
+    def draw_sample_dendrogram(
+        self,
+        ax,
+        sample_linkage,
+    ):
+        """Draw the column dendrogram for clustered samples."""
+        if sample_linkage is None:
+            ax.axis("off")
+            return
+
+        dendrogram(
+            sample_linkage,
+            ax=ax,
+            no_labels=True,
+            color_threshold=0,
+            above_threshold_color="#333333",
+            link_color_func=lambda _: "#333333",
+        )
+        ax.axis("off")
+
+        for collection in ax.collections:
+            collection.set_linewidth(0.45)
+
+    def draw_gene_dendrogram(self, ax, gene_linkage):
+        """Draw the row dendrogram for clustered genes."""
+        if gene_linkage is None:
+            ax.axis("off")
+            return
+
+        dendrogram(
+            gene_linkage,
+            ax=ax,
+            orientation="left",
+            no_labels=True,
+            color_threshold=0,
+            above_threshold_color="#333333",
+            link_color_func=lambda _: "#333333",
+        )
+        ax.invert_yaxis()
+        ax.axis("off")
+
+        for collection in ax.collections:
+            collection.set_linewidth(0.6)
+
+    def draw_heatmap_group_legend(self, ax, group_colors):
+        """Draw sample group legend below the heatmap color scale."""
+        ax.axis("off")
+        y_positions = 0.82 - np.arange(len(group_colors)) * 0.22
+
+        for y, (group, color) in zip(y_positions, group_colors.items()):
+            ax.scatter(
+                0.08,
+                y,
+                s=24,
+                marker="s",
+                color=color,
+                edgecolor="black",
+                linewidth=0.4,
+                transform=ax.transAxes,
+                clip_on=False,
+            )
+            ax.text(
+                0.18,
+                y,
+                format_group_label(group),
+                transform=ax.transAxes,
+                ha="left",
+                va="center",
+                fontsize=8,
+            )
+
+    def zscore_rows(self, matrix):
+        """Z-score each row across samples."""
+        row_mean = np.nanmean(matrix, axis=1, keepdims=True)
+        row_sd = np.nanstd(matrix, axis=1, keepdims=True)
+        row_sd[row_sd == 0] = 1.0
+
+        return (matrix - row_mean) / row_sd
+
+    def get_cluster_order(self, matrix):
+        """Return hierarchical clustering order for rows in a matrix."""
+        cluster_tree = self.get_cluster_linkage(matrix)
+
+        if cluster_tree is None:
+            return np.arange(np.asarray(matrix).shape[0])
+
+        return leaves_list(cluster_tree)
+
+    def get_cluster_linkage(self, matrix):
+        """Return hierarchical clustering linkage for rows in a matrix."""
+        matrix = np.asarray(matrix, dtype=float)
+
+        if matrix.shape[0] <= 2 or matrix.shape[1] <= 1:
+            return None
+
+        safe_matrix = np.nan_to_num(matrix, nan=0.0, posinf=0.0, neginf=0.0)
+        constant_rows = np.std(safe_matrix, axis=1) == 0
+
+        if np.any(constant_rows):
+            safe_matrix[constant_rows, 0] += 1e-9
+
+        distances = pdist(safe_matrix, metric="correlation")
+        distances = np.nan_to_num(distances, nan=0.0, posinf=0.0, neginf=0.0)
+
+        if np.all(distances == 0):
+            return None
+
+        return linkage(distances, method="average")
 
     def create_paired_data(self, gene, expression):
         """Create long-format expression data for matched tumor-normal pairs."""
@@ -954,6 +1392,32 @@ def main():
         output_path=driver_scatter_file,
         plot_normal=plot_normal,
         driver_gene=driver_gene,
+    )
+
+    # 5) Plot multi-gene heatmap by driver mutation status
+    driver_gene = "STK11"
+    heatmap_genes = [
+        "AKR1C2",
+        "CYP2C18",
+        "CYP2C19",
+        "CYP2W1",
+        "CYP4F3",
+        "PLA2G4A",
+        "PTGES",
+        "PTGES2",
+        "PTGES3",
+        "PTGS2",
+    ]
+    gene_heatmap_file = os.path.join(
+        output_dir,
+        f"{cancer_type}_{driver_gene}_gene_group_heatmap.svg",
+    )
+    analysis.plot_gene_heatmap(
+        genes=heatmap_genes,
+        output_path=gene_heatmap_file,
+        driver_gene=driver_gene,
+        plot_normal=True,
+        color_percentile=95,
     )
 
 
