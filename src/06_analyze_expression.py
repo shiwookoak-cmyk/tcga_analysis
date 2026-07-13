@@ -732,7 +732,7 @@ class AnalyzeExpression:
         ])
         colorbar = fig.colorbar(im, cax=ax_cbar)
         colorbar.ax.tick_params(labelsize=8, length=3)
-        colorbar.ax.set_title("Z-score", fontsize=9, pad=6)
+        colorbar.ax.set_title("z-score", fontsize=9, pad=6)
 
         ax_legend = fig.add_axes([
             x_fraction(colorbar_x - 0.08),
@@ -840,15 +840,16 @@ class AnalyzeExpression:
     def draw_heatmap_group_legend(self, ax, group_colors):
         """Draw sample group legend below the heatmap color scale."""
         ax.axis("off")
-        y_positions = 0.82 - np.arange(len(group_colors)) * 0.22
+        legend_groups = self.order_heatmap_legend_groups(group_colors)
+        y_positions = 0.82 - np.arange(len(legend_groups)) * 0.22
 
-        for y, (group, color) in zip(y_positions, group_colors.items()):
+        for y, group in zip(y_positions, legend_groups):
             ax.scatter(
                 0.08,
                 y,
                 s=24,
                 marker="s",
-                color=color,
+                color=group_colors[group],
                 edgecolor="black",
                 linewidth=0.4,
                 transform=ax.transAxes,
@@ -863,6 +864,26 @@ class AnalyzeExpression:
                 va="center",
                 fontsize=8,
             )
+
+    def order_heatmap_legend_groups(self, group_colors):
+        """Order heatmap group legend as mutant, WT, then normal."""
+        group_order = list(group_colors)
+
+        def legend_priority(group):
+            if group.endswith(" MT"):
+                return 0
+            if group.endswith(" WT"):
+                return 1
+            if group == "Tumor":
+                return 2
+            if group == "Normal":
+                return 3
+            return 4
+
+        return sorted(
+            group_order,
+            key=lambda group: (legend_priority(group), group_order.index(group)),
+        )
 
     def zscore_rows(self, matrix):
         """Z-score each row across samples."""
